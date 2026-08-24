@@ -18,7 +18,8 @@ data class TransactionEntity(
     val merchant: String,
     val note: String,
     val timestamp: Long,
-    val source: TransactionSource,
+    // Legacy columns remain so updates preserve databases created by 0.1.0.
+    val source: TransactionSource = TransactionSource.MANUAL,
     val rawText: String? = null,
     val fingerprint: String? = null,
 )

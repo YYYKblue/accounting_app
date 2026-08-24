@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.yyykblue.accounting.data.TransactionEntity
 import com.yyykblue.accounting.model.Categories
+import com.yyykblue.accounting.model.MoneyAmount
 import com.yyykblue.accounting.model.TransactionType
 import java.math.BigDecimal
 
@@ -48,7 +49,7 @@ fun AddTransactionScreen(
         var category by remember { mutableStateOf(editing?.category ?: Categories.forType(type).first()) }
         var merchant by remember { mutableStateOf(editing?.merchant.orEmpty()) }
         var note by remember { mutableStateOf(editing?.note.orEmpty()) }
-        val amountValid = amount.toBigDecimalOrNull()?.let { it > BigDecimal.ZERO && it.scale() <= 2 } == true
+        val amountValid = MoneyAmount.parseCents(amount) != null
 
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
@@ -56,7 +57,7 @@ fun AddTransactionScreen(
             Text(if (editing == null) "记一笔" else "编辑账单", fontSize = 26.sp, fontWeight = FontWeight.Bold)
             if (editing != null) {
                 Text(
-                    "来源：${editing.source.displayName} · ${editing.timestamp.asDateTime()}",
+                    "记录时间：${editing.timestamp.asDateTime()}",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }

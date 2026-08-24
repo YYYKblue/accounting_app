@@ -7,7 +7,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -26,7 +25,6 @@ private enum class MainTab(val title: String) {
     HOME("账单"),
     ADD("记一笔"),
     STATS("统计"),
-    SETTINGS("设置"),
 }
 
 @Composable
@@ -52,7 +50,6 @@ fun AccountingApp(viewModel: AccountingViewModel) {
                                     MainTab.HOME -> Icons.Default.Home
                                     MainTab.ADD -> Icons.Default.AddCircle
                                     MainTab.STATS -> Icons.Default.BarChart
-                                    MainTab.SETTINGS -> Icons.Default.Settings
                                 },
                                 contentDescription = null,
                             )
@@ -89,7 +86,6 @@ fun AccountingApp(viewModel: AccountingViewModel) {
                     },
                 )
                 MainTab.STATS -> StatsScreen(state)
-                MainTab.SETTINGS -> SettingsScreen()
             }
         }
     }

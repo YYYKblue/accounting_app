@@ -5,12 +5,15 @@ enum class TransactionType {
     INCOME,
 }
 
-enum class TransactionSource(val displayName: String) {
-    MANUAL("手动"),
-    ALIPAY("支付宝"),
-    WECHAT("微信"),
-    BANK("银行卡"),
+// Kept for compatibility with databases created by version 0.1.0.
+// New entries are always MANUAL; the app no longer reads notifications.
+enum class TransactionSource {
+    MANUAL,
+    ALIPAY,
+    WECHAT,
+    BANK,
 }
+
 
 object Categories {
     val expense = listOf("餐饮", "交通", "购物", "居住", "娱乐", "学习", "医疗", "人情", "其他")

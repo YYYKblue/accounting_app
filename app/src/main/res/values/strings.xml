@@ -1,5 +1,3 @@
 <resources>
     <string name="app_name">简账</string>
-    <string name="notification_listener_label">自动记账通知监听</string>
-    <string name="notification_listener_description">仅在收到支付通知时解析金额，并将账单保存在本机。</string>
 </resources>

@@ -82,7 +82,7 @@ fun HomeScreen(
                 ) {
                     Text("这个月还没有账单", fontSize = 18.sp, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(6.dp))
-                    Text("点下方“记一笔”，或在设置中开启自动记账", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("点下方“记一笔”开始手动记账", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         } else {
@@ -157,7 +157,7 @@ private fun TransactionRow(
                 Text(transaction.merchant, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(3.dp))
                 Text(
-                    "${transaction.category} · ${transaction.source.displayName} · ${transaction.timestamp.asDateTime()}",
+                    "${transaction.category} · ${transaction.timestamp.asDateTime()}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

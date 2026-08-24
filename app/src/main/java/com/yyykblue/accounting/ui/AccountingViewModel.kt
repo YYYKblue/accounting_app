@@ -5,10 +5,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.yyykblue.accounting.data.TransactionEntity
 import com.yyykblue.accounting.data.TransactionRepository
-import com.yyykblue.accounting.model.TransactionSource
+import com.yyykblue.accounting.model.MoneyAmount
 import com.yyykblue.accounting.model.TransactionType
-import java.math.BigDecimal
-import java.math.RoundingMode
 import java.time.Instant
 import java.time.YearMonth
 import java.time.ZoneId
@@ -62,7 +60,7 @@ class AccountingViewModel(private val repository: TransactionRepository) : ViewM
         editing: TransactionEntity?,
         onComplete: () -> Unit,
     ) {
-        val amountCents = amount.toAmountCents() ?: return
+        val amountCents = MoneyAmount.parseCents(amount) ?: return
         viewModelScope.launch {
             if (editing == null) {
                 repository.add(
@@ -73,7 +71,6 @@ class AccountingViewModel(private val repository: TransactionRepository) : ViewM
                         merchant = merchant.trim().ifBlank { if (type == TransactionType.EXPENSE) "日常支出" else "收入" },
                         note = note.trim(),
                         timestamp = System.currentTimeMillis(),
-                        source = TransactionSource.MANUAL,
                     ),
                 )
             } else {
@@ -104,11 +101,3 @@ class AccountingViewModel(private val repository: TransactionRepository) : ViewM
 
 private fun Long.toYearMonth(): YearMonth =
     YearMonth.from(Instant.ofEpochMilli(this).atZone(ZoneId.systemDefault()))
-
-private fun String.toAmountCents(): Long? = runCatching {
-    BigDecimal(trim())
-        .setScale(2, RoundingMode.UNNECESSARY)
-        .movePointRight(2)
-        .longValueExact()
-        .takeIf { it > 0 }
-}.getOrNull()
