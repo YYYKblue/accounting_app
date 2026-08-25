@@ -24,4 +24,16 @@ interface TransactionDao {
 
     @Query("DELETE FROM transactions")
     suspend fun deleteAll()
+
+    @Query("SELECT * FROM custom_categories ORDER BY name COLLATE NOCASE")
+    fun observeCategories(): Flow<List<CategoryEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertCategory(category: CategoryEntity)
+
+    @Query("SELECT * FROM merchants ORDER BY name COLLATE NOCASE")
+    fun observeMerchants(): Flow<List<MerchantEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertMerchant(merchant: MerchantEntity)
 }

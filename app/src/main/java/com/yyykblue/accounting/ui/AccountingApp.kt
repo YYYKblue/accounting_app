@@ -74,12 +74,15 @@ fun AccountingApp(viewModel: AccountingViewModel) {
                 )
                 MainTab.ADD -> AddTransactionScreen(
                     editing = editing,
+                    customCategories = state.customCategories,
+                    merchantSuggestions = state.merchants,
+                    outstandingDebtCents = state.outstandingDebtCents,
                     onCancel = {
                         editing = null
                         tab = MainTab.HOME
                     },
-                    onSave = { amount, type, category, merchant, note ->
-                        viewModel.save(amount, type, category, merchant, note, editing) {
+                    onSave = { amount, type, category, merchant, note, paymentMethod ->
+                        viewModel.save(amount, type, category, merchant, note, paymentMethod, editing) {
                             editing = null
                             tab = MainTab.HOME
                         }

@@ -36,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.yyykblue.accounting.data.TransactionEntity
+import com.yyykblue.accounting.model.PaymentMethod
 import com.yyykblue.accounting.model.TransactionType
 
 @Composable
@@ -64,7 +65,7 @@ fun HomeScreen(
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("${state.month.year}年${state.month.monthValue}月", fontWeight = FontWeight.SemiBold)
-                    Text("本月结余 ${state.balanceCents.asMoney()}", style = MaterialTheme.typography.labelMedium)
+                    Text("本月收支差额 ${state.balanceCents.asMoney()}", style = MaterialTheme.typography.labelMedium)
                 }
                 IconButton(onClick = onNextMonth) {
                     Icon(Icons.Default.ChevronRight, contentDescription = "下个月")
@@ -126,6 +127,7 @@ private fun SummaryCard(state: AccountingUiState) {
         ) {
             SummaryValue("支出", state.expenseCents.asMoney(), Color.White)
             SummaryValue("收入", state.incomeCents.asMoney(), Color.White)
+            SummaryValue("待还借贷", state.outstandingDebtCents.asMoney(), Color.White)
         }
     }
 }
@@ -135,7 +137,7 @@ private fun SummaryValue(label: String, value: String, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(label, color = color.copy(alpha = 0.8f), style = MaterialTheme.typography.labelLarge)
         Spacer(Modifier.height(4.dp))
-        Text(value, color = color, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Text(value, color = color, fontSize = 18.sp, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -157,7 +159,13 @@ private fun TransactionRow(
                 Text(transaction.merchant, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(3.dp))
                 Text(
-                    "${transaction.category} · ${transaction.timestamp.asDateTime()}",
+                    buildString {
+                        append(transaction.category)
+                        if (transaction.type == TransactionType.EXPENSE) {
+                            append(if (transaction.paymentMethod == PaymentMethod.CREDIT) " · 借贷" else " · 余额")
+                        }
+                        append(" · ${transaction.timestamp.asDateTime()}")
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -167,8 +175,12 @@ private fun TransactionRow(
                 }
             }
             Text(
-                text = (if (transaction.type == TransactionType.EXPENSE) "−" else "+") + transaction.amountCents.asMoney(),
-                color = if (transaction.type == TransactionType.EXPENSE) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                text = (if (transaction.type == TransactionType.INCOME) "+" else "−") + transaction.amountCents.asMoney(),
+                color = when (transaction.type) {
+                    TransactionType.EXPENSE -> MaterialTheme.colorScheme.primary
+                    TransactionType.INCOME -> MaterialTheme.colorScheme.secondary
+                    TransactionType.DEBT_REPAYMENT -> MaterialTheme.colorScheme.onSurfaceVariant
+                },
                 fontWeight = FontWeight.Bold,
             )
             IconButton(onClick = onDelete) {

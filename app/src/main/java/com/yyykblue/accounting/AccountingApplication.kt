@@ -11,7 +11,7 @@ class AccountingApplication : Application() {
             applicationContext,
             AccountingDatabase::class.java,
             "accounting.db",
-        ).build()
+        ).addMigrations(AccountingDatabase.MIGRATION_1_2).build()
     }
 
     val repository by lazy { TransactionRepository(database.transactionDao()) }

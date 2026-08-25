@@ -5,7 +5,10 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.yyykblue.accounting.data.TransactionEntity
 import com.yyykblue.accounting.data.TransactionRepository
+import com.yyykblue.accounting.model.Categories
+import com.yyykblue.accounting.model.FinanceCalculator
 import com.yyykblue.accounting.model.MoneyAmount
+import com.yyykblue.accounting.model.PaymentMethod
 import com.yyykblue.accounting.model.TransactionType
 import java.time.Instant
 import java.time.YearMonth
@@ -20,10 +23,14 @@ import kotlinx.coroutines.launch
 data class AccountingUiState(
     val month: YearMonth = YearMonth.now(),
     val transactions: List<TransactionEntity> = emptyList(),
+    val allTransactions: List<TransactionEntity> = emptyList(),
+    val customCategories: Map<TransactionType, List<String>> = emptyMap(),
+    val merchants: List<String> = emptyList(),
 ) {
     val incomeCents: Long = transactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amountCents }
     val expenseCents: Long = transactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amountCents }
     val balanceCents: Long = incomeCents - expenseCents
+    val outstandingDebtCents: Long = FinanceCalculator.outstandingDebt(allTransactions)
 }
 
 class AccountingViewModel(private val repository: TransactionRepository) : ViewModel() {
@@ -31,11 +38,18 @@ class AccountingViewModel(private val repository: TransactionRepository) : ViewM
 
     val uiState: StateFlow<AccountingUiState> = combine(
         repository.transactions,
+        repository.customCategories,
+        repository.merchants,
         selectedMonth,
-    ) { allTransactions, month ->
+    ) { allTransactions, categoryEntities, merchantEntities, month ->
         AccountingUiState(
             month = month,
             transactions = allTransactions.filter { it.timestamp.toYearMonth() == month },
+            allTransactions = allTransactions,
+            customCategories = categoryEntities
+                .groupBy { it.type }
+                .mapValues { (_, values) -> values.map { it.name } },
+            merchants = merchantEntities.map { it.name },
         )
     }.stateIn(
         scope = viewModelScope,
@@ -57,20 +71,36 @@ class AccountingViewModel(private val repository: TransactionRepository) : ViewM
         category: String,
         merchant: String,
         note: String,
+        paymentMethod: PaymentMethod,
         editing: TransactionEntity?,
         onComplete: () -> Unit,
     ) {
         val amountCents = MoneyAmount.parseCents(amount) ?: return
+        val normalizedCategory = if (type == TransactionType.DEBT_REPAYMENT) {
+            "借贷还款"
+        } else {
+            category.trim().ifBlank { Categories.forType(type).first() }
+        }
+        val normalizedMerchant = merchant.trim().ifBlank {
+            when (type) {
+                TransactionType.EXPENSE -> "日常支出"
+                TransactionType.INCOME -> "收入"
+                TransactionType.DEBT_REPAYMENT -> "借贷还款"
+            }
+        }
+        val normalizedPaymentMethod =
+            if (type == TransactionType.EXPENSE) paymentMethod else PaymentMethod.BALANCE
         viewModelScope.launch {
             if (editing == null) {
                 repository.add(
                     TransactionEntity(
                         amountCents = amountCents,
                         type = type,
-                        category = category,
-                        merchant = merchant.trim().ifBlank { if (type == TransactionType.EXPENSE) "日常支出" else "收入" },
+                        category = normalizedCategory,
+                        merchant = normalizedMerchant,
                         note = note.trim(),
                         timestamp = System.currentTimeMillis(),
+                        paymentMethod = normalizedPaymentMethod,
                     ),
                 )
             } else {
@@ -78,12 +108,17 @@ class AccountingViewModel(private val repository: TransactionRepository) : ViewM
                     editing.copy(
                         amountCents = amountCents,
                         type = type,
-                        category = category,
-                        merchant = merchant.trim().ifBlank { editing.merchant },
+                        category = normalizedCategory,
+                        merchant = normalizedMerchant,
                         note = note.trim(),
+                        paymentMethod = normalizedPaymentMethod,
                     ),
                 )
             }
+            if (type != TransactionType.DEBT_REPAYMENT && normalizedCategory !in Categories.forType(type)) {
+                repository.rememberCategory(normalizedCategory, type)
+            }
+            if (merchant.isNotBlank()) repository.rememberMerchant(normalizedMerchant)
             onComplete()
         }
     }

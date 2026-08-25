@@ -3,13 +3,32 @@ package com.yyykblue.accounting.data
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [TransactionEntity::class],
-    version = 1,
+    entities = [TransactionEntity::class, CategoryEntity::class, MerchantEntity::class],
+    version = 2,
     exportSchema = true,
 )
 @TypeConverters(RoomConverters::class)
 abstract class AccountingDatabase : RoomDatabase() {
     abstract fun transactionDao(): TransactionDao
+
+    companion object {
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE transactions ADD COLUMN paymentMethod TEXT NOT NULL DEFAULT 'BALANCE'",
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS custom_categories " +
+                        "(name TEXT NOT NULL, type TEXT NOT NULL, PRIMARY KEY(name, type))",
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS merchants (name TEXT NOT NULL, PRIMARY KEY(name))",
+                )
+            }
+        }
+    }
 }

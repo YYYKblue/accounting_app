@@ -1,6 +1,7 @@
 package com.yyykblue.accounting.data
 
 import androidx.room.TypeConverter
+import com.yyykblue.accounting.model.PaymentMethod
 import com.yyykblue.accounting.model.TransactionSource
 import com.yyykblue.accounting.model.TransactionType
 
@@ -16,4 +17,10 @@ class RoomConverters {
 
     @TypeConverter
     fun stringToTransactionSource(value: String): TransactionSource = TransactionSource.valueOf(value)
+
+    @TypeConverter
+    fun paymentMethodToString(value: PaymentMethod): String = value.name
+
+    @TypeConverter
+    fun stringToPaymentMethod(value: String): PaymentMethod = PaymentMethod.valueOf(value)
 }
