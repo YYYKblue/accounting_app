@@ -61,6 +61,7 @@ fun StatsScreen(state: AccountingUiState) {
             DebtCard(state)
             Spacer(Modifier.height(18.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                PeriodChip("天", SpendingPeriod.DAY, period) { period = it }
                 PeriodChip("周", SpendingPeriod.WEEK, period) { period = it }
                 PeriodChip("月", SpendingPeriod.MONTH, period) { period = it }
                 PeriodChip("年", SpendingPeriod.YEAR, period) { period = it }
@@ -68,9 +69,10 @@ fun StatsScreen(state: AccountingUiState) {
             Spacer(Modifier.height(8.dp))
             Text(
                 when (period) {
-                    SpendingPeriod.WEEK -> "最近 8 周消费"
-                    SpendingPeriod.MONTH -> "最近 12 个月消费"
-                    SpendingPeriod.YEAR -> "最近 5 年消费"
+                    SpendingPeriod.DAY -> "最近 7 天消费"
+                    SpendingPeriod.WEEK -> "最近 5 周消费"
+                    SpendingPeriod.MONTH -> "2026 年 8 月起的月消费"
+                    SpendingPeriod.YEAR -> "2026 年起的年消费"
                 },
                 fontWeight = FontWeight.SemiBold,
             )

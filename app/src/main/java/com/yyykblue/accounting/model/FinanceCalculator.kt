@@ -9,6 +9,7 @@ import java.time.ZoneId
 import java.time.temporal.TemporalAdjusters
 
 enum class SpendingPeriod {
+    DAY,
     WEEK,
     MONTH,
     YEAR,
@@ -52,10 +53,25 @@ object FinanceCalculator {
     ): List<SpendingBar> {
         val expenses = transactions.filter { it.type == TransactionType.EXPENSE }
         return when (period) {
+            SpendingPeriod.DAY -> dailyBars(expenses, today, zoneId)
             SpendingPeriod.WEEK -> weeklyBars(expenses, today, zoneId)
             SpendingPeriod.MONTH -> monthlyBars(expenses, today, zoneId)
             SpendingPeriod.YEAR -> yearlyBars(expenses, today, zoneId)
         }
+    }
+
+    private fun dailyBars(
+        expenses: List<TransactionEntity>,
+        today: LocalDate,
+        zoneId: ZoneId,
+    ): List<SpendingBar> = (6 downTo 0).map { daysAgo ->
+        val date = today.minusDays(daysAgo.toLong())
+        SpendingBar(
+            label = "${date.monthValue}/${date.dayOfMonth}",
+            amountCents = expenses
+                .filter { it.timestamp.toLocalDate(zoneId) == date }
+                .sumOf { it.amountCents },
+        )
     }
 
     private fun weeklyBars(
@@ -64,7 +80,7 @@ object FinanceCalculator {
         zoneId: ZoneId,
     ): List<SpendingBar> {
         val currentMonday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-        return (7 downTo 0).map { weeksAgo ->
+        return (4 downTo 0).map { weeksAgo ->
             val start = currentMonday.minusWeeks(weeksAgo.toLong())
             val end = start.plusDays(6)
             SpendingBar(
@@ -81,24 +97,26 @@ object FinanceCalculator {
         today: LocalDate,
         zoneId: ZoneId,
     ): List<SpendingBar> {
+        val firstMonth = YearMonth.of(2026, 8)
         val currentMonth = YearMonth.from(today)
-        return (11 downTo 0).map { monthsAgo ->
-            val month = currentMonth.minusMonths(monthsAgo.toLong())
+        if (currentMonth < firstMonth) return emptyList()
+        return generateSequence(firstMonth) { month ->
+            month.plusMonths(1).takeIf { it <= currentMonth }
+        }.map { month ->
             SpendingBar(
                 label = "${month.year % 100}/${month.monthValue}",
                 amountCents = expenses
                     .filter { YearMonth.from(it.timestamp.toLocalDate(zoneId)) == month }
                     .sumOf { it.amountCents },
             )
-        }
+        }.toList()
     }
 
     private fun yearlyBars(
         expenses: List<TransactionEntity>,
         today: LocalDate,
         zoneId: ZoneId,
-    ): List<SpendingBar> = (4 downTo 0).map { yearsAgo ->
-        val year = today.year - yearsAgo
+    ): List<SpendingBar> = (2026..today.year).map { year ->
         SpendingBar(
             label = year.toString(),
             amountCents = expenses

@@ -31,6 +31,29 @@ class FinanceCalculatorTest {
     }
 
     @Test
+    fun `daily bars show the latest seven days and only expenses`() {
+        val transactions = listOf(
+            transaction(1_000, TransactionType.EXPENSE, PaymentMethod.BALANCE, LocalDate.of(2026, 8, 20)),
+            transaction(2_000, TransactionType.EXPENSE, PaymentMethod.CREDIT, LocalDate.of(2026, 8, 26)),
+            transaction(9_000, TransactionType.INCOME, PaymentMethod.BALANCE, LocalDate.of(2026, 8, 25)),
+            transaction(500, TransactionType.DEBT_REPAYMENT, PaymentMethod.BALANCE, LocalDate.of(2026, 8, 24)),
+            transaction(8_000, TransactionType.EXPENSE, PaymentMethod.BALANCE, LocalDate.of(2026, 8, 19)),
+        )
+
+        val bars = FinanceCalculator.spendingBars(
+            transactions,
+            SpendingPeriod.DAY,
+            LocalDate.of(2026, 8, 26),
+            ZoneOffset.UTC,
+        )
+
+        assertEquals(7, bars.size)
+        assertEquals("8/20", bars.first().label)
+        assertEquals("8/26", bars.last().label)
+        assertEquals(3_000L, bars.sumOf { it.amountCents })
+    }
+
+    @Test
     fun `weekly bars exclude income and repayment`() {
         val transactions = listOf(
             transaction(1_000, TransactionType.EXPENSE, PaymentMethod.BALANCE, LocalDate.of(2026, 8, 17)),
@@ -46,7 +69,7 @@ class FinanceCalculatorTest {
             zoneId = ZoneOffset.UTC,
         )
 
-        assertEquals(8, bars.size)
+        assertEquals(5, bars.size)
         assertEquals(3_000L, bars.sumOf { it.amountCents })
         assertEquals(3_000L, bars[bars.lastIndex - 1].amountCents)
         assertEquals(0L, bars.last().amountCents)
@@ -73,8 +96,31 @@ class FinanceCalculatorTest {
             ZoneOffset.UTC,
         )
 
-        assertEquals(3_000L, months.sumOf { it.amountCents })
-        assertEquals(3_000L, years.sumOf { it.amountCents })
+        assertEquals(1, months.size)
+        assertEquals("26/8", months.single().label)
+        assertEquals(2_000L, months.sumOf { it.amountCents })
+        assertEquals(1, years.size)
+        assertEquals("2026", years.single().label)
+        assertEquals(2_000L, years.sumOf { it.amountCents })
+    }
+
+    @Test
+    fun `monthly and yearly bars grow after their fixed starting periods`() {
+        val months = FinanceCalculator.spendingBars(
+            emptyList(),
+            SpendingPeriod.MONTH,
+            LocalDate.of(2026, 10, 1),
+            ZoneOffset.UTC,
+        )
+        val years = FinanceCalculator.spendingBars(
+            emptyList(),
+            SpendingPeriod.YEAR,
+            LocalDate.of(2028, 1, 1),
+            ZoneOffset.UTC,
+        )
+
+        assertEquals(listOf("26/8", "26/9", "26/10"), months.map { it.label })
+        assertEquals(listOf("2026", "2027", "2028"), years.map { it.label })
     }
 
     private fun transaction(
