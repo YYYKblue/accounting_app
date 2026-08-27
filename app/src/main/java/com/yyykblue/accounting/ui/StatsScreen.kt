@@ -23,10 +23,12 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -83,7 +85,10 @@ fun StatsScreen(state: AccountingUiState) {
                 fontWeight = FontWeight.Bold,
             )
             Spacer(Modifier.height(8.dp))
-            SpendingBarChart(bars)
+            SpendingBarChart(
+                bars = bars,
+                fitAllBars = period == SpendingPeriod.DAY || period == SpendingPeriod.WEEK,
+            )
             Spacer(Modifier.height(28.dp))
             Text("${state.month.year}年${state.month.monthValue}月分类", fontSize = 20.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(14.dp))
@@ -151,46 +156,84 @@ private fun PeriodChip(
 }
 
 @Composable
-private fun SpendingBarChart(bars: List<SpendingBar>) {
+private fun SpendingBarChart(
+    bars: List<SpendingBar>,
+    fitAllBars: Boolean,
+) {
     val maximum = bars.maxOfOrNull { it.amountCents }?.coerceAtLeast(1) ?: 1
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .height(230.dp)
-                .padding(horizontal = 12.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.Bottom,
-        ) {
-            bars.forEach { bar ->
-                val fraction = (bar.amountCents.toFloat() / maximum.toFloat()).coerceIn(0.02f, 1f)
-                Column(
-                    modifier = Modifier.width(52.dp).fillMaxHeight(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text(compactMoney(bar.amountCents), fontSize = 9.sp, maxLines = 1)
-                    Spacer(Modifier.height(4.dp))
-                    Box(
-                        modifier = Modifier.weight(1f).width(28.dp),
-                        contentAlignment = Alignment.BottomCenter,
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .fillMaxHeight(fraction)
-                                .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
-                                .background(MaterialTheme.colorScheme.primary),
-                        )
-                    }
-                    Spacer(Modifier.height(6.dp))
-                    Text(bar.label, fontSize = 10.sp, maxLines = 1)
+        if (fitAllBars) {
+            Row(
+                modifier = Modifier.fillMaxWidth().height(230.dp).padding(horizontal = 8.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                verticalAlignment = Alignment.Bottom,
+            ) {
+                bars.forEach { bar ->
+                    SpendingBarItem(
+                        bar = bar,
+                        maximum = maximum,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+        } else {
+            val scrollState = rememberScrollState()
+            LaunchedEffect(bars.size, bars.firstOrNull()?.label, bars.lastOrNull()?.label) {
+                withFrameNanos { }
+                withFrameNanos { }
+                scrollState.scrollTo(scrollState.maxValue)
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(scrollState)
+                    .height(230.dp)
+                    .padding(horizontal = 12.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.Bottom,
+            ) {
+                bars.forEach { bar ->
+                    SpendingBarItem(
+                        bar = bar,
+                        maximum = maximum,
+                        modifier = Modifier.width(52.dp),
+                    )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SpendingBarItem(
+    bar: SpendingBar,
+    maximum: Long,
+    modifier: Modifier,
+) {
+    val fraction = (bar.amountCents.toFloat() / maximum.toFloat()).coerceIn(0.02f, 1f)
+    Column(
+        modifier = modifier.fillMaxHeight(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(compactMoney(bar.amountCents), fontSize = 9.sp, maxLines = 1)
+        Spacer(Modifier.height(4.dp))
+        Box(
+            modifier = Modifier.weight(1f).width(24.dp),
+            contentAlignment = Alignment.BottomCenter,
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(fraction)
+                    .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                    .background(MaterialTheme.colorScheme.primary),
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(bar.label, fontSize = 10.sp, maxLines = 1)
     }
 }
 

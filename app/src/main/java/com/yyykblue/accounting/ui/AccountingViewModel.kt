@@ -3,6 +3,7 @@ package com.yyykblue.accounting.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.yyykblue.accounting.data.DailyReminderEntity
 import com.yyykblue.accounting.data.TransactionEntity
 import com.yyykblue.accounting.data.TransactionRepository
 import com.yyykblue.accounting.model.Categories
@@ -26,6 +27,7 @@ data class AccountingUiState(
     val allTransactions: List<TransactionEntity> = emptyList(),
     val customCategories: Map<TransactionType, List<String>> = emptyMap(),
     val merchants: List<String> = emptyList(),
+    val reminders: List<DailyReminderEntity> = emptyList(),
 ) {
     val incomeCents: Long = transactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amountCents }
     val expenseCents: Long = transactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amountCents }
@@ -40,8 +42,9 @@ class AccountingViewModel(private val repository: TransactionRepository) : ViewM
         repository.transactions,
         repository.customCategories,
         repository.merchants,
+        repository.reminders,
         selectedMonth,
-    ) { allTransactions, categoryEntities, merchantEntities, month ->
+    ) { allTransactions, categoryEntities, merchantEntities, reminders, month ->
         AccountingUiState(
             month = month,
             transactions = allTransactions.filter { it.timestamp.toYearMonth() == month },
@@ -50,6 +53,7 @@ class AccountingViewModel(private val repository: TransactionRepository) : ViewM
                 .groupBy { it.type }
                 .mapValues { (_, values) -> values.map { it.name } },
             merchants = merchantEntities.map { it.name },
+            reminders = reminders,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -125,6 +129,23 @@ class AccountingViewModel(private val repository: TransactionRepository) : ViewM
 
     fun delete(transaction: TransactionEntity) {
         viewModelScope.launch { repository.delete(transaction) }
+    }
+
+    fun addReminder(title: String) {
+        val normalizedTitle = title.trim()
+        if (normalizedTitle.isEmpty()) return
+        viewModelScope.launch { repository.addReminder(normalizedTitle) }
+    }
+
+    fun toggleReminder(reminder: DailyReminderEntity, todayEpochDay: Long) {
+        val completedDate = if (reminder.completedEpochDay == todayEpochDay) null else todayEpochDay
+        viewModelScope.launch {
+            repository.setReminderCompletedDate(reminder.id, completedDate)
+        }
+    }
+
+    fun deleteReminder(reminder: DailyReminderEntity) {
+        viewModelScope.launch { repository.deleteReminder(reminder) }
     }
 
     class Factory(private val repository: TransactionRepository) : ViewModelProvider.Factory {
